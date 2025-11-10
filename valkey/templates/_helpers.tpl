@@ -36,10 +36,13 @@ Common labels
 {{- define "valkey.labels" -}}
 helm.sh/chart: {{ include "valkey.chart" . }}
 {{ include "valkey.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- if or .Values.image.tag .Chart.AppVersion }}
+app.kubernetes.io/version: {{ mustRegexReplaceAllLiteral "@sha.*" .Values.image.tag "" | default .Chart.AppVersion | trunc 63 | trimSuffix "-" | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- with .Values.commonLabels }}
+{{- toYaml . | nindent 0 }}
+{{- end }}
 {{- end }}
 
 {{/*
@@ -94,7 +97,7 @@ Validate auth configuration
   {{- if .Values.auth.aclConfig }}
     {{- $trimmed := .Values.auth.aclConfig | trim }}
     {{- /* Use regex to check for any non-empty, non-comment line */}}
-    {{- $hasContent := regexMatch "(?m)^(\s*[^#\s].*)$" $trimmed }}
+    {{- $hasContent := regexMatch "(?m)^(\\s*[^#\\s].*)$" $trimmed }}
     {{- if $hasContent }}
       {{- $methodCount = add $methodCount 1 }}
     {{- end }}
